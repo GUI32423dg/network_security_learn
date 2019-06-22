@@ -1,0 +1,28 @@
+filter机制构建网关防火墙其中一条的防火墙规则的写法
+目的：
+    192.168.9.200这台主机只能够访问10.0.1.100主机的SMTP和POP3服务
+    192.168.0.0/24网段上的其他主机只可以访问因特网上的一些服务，有五个
+    因特网的主机不能访问企业内部的任何主机
+
+
+iptables -t filter -P INPUT DROP    //将filter表中的INPUT链的默认策略改为DROP
+iptables -t filter -P FORWORD DROP  //将filter表中的FORWPRD链的默认策略改为DROP
+
+iptables -t filer -F                //清空filter表中的所有规则
+
+iptables -A INPUT -p tcp -m state --state  INVALID -j DROP                    //将INPUT中连接状态为状态不明的数据包设置为DROP
+iptables -A INPUT -p tcp -m state --state  ESTABLISHED,RELATED -j ACCECT      //将INPUT中连接状态为ESTABLISHED，RELATED的数据包设置为ACCECT
+iptables -A FORWORD -i eth0 -o eth1 -m state --state INVALID -j DROP          //将从网关防火墙eth0进入eth1出去的数据包状态为INVALId的设置为丢弃
+iptables -A FORWORD -i eth0 -o eth1 -m state --state ESTABLISHED，RELATED -j ACCECT
+
+以上的这几条规则一般来说所有的防火墙规则都要考虑加上
+
+iptables -A FORWORD -i eth1 -o eth0 -p tcp -s 192.168.0.200 -d 10.0.1.100 --dport 25,100 -j ACCECT 
+//192.168.0.200 可以访问10.0.1.100 服务器的25和100号端口
+iptables -A FORWORD -i eth1 -o eth0 -p all -s 192.168.0.200 -j DROP
+//192.168.0.200 不能访问任何互联网的服务
+
+
+iptables -A FORWORD -i eth1 -o eth0 -p tcp --dport 25,110,80,443 -j ACCECT
+iptables -A FORWORD -i eth1 -o eth0 -p udp --dport 53 -j ACCECT
+//192.168.0.0/24可以访问因特网上的这五个服务
